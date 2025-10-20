@@ -1,0 +1,25 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp files
+*.tmp
+*.bak
+*~
+
+# Config files
+# config.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/

@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# PROVIDE: cloudflared
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Enable in /etc/rc.conf:
+#   cloudflared_enable="YES"
+
+. /etc/rc.subr
+
+name="cloudflared"
+rcvar="${name}_enable"
+
+load_rc_config $name
+
+: ${cloudflared_enable:="NO"}
+: ${cloudflared_config:="/usr/local/etc/cloudflared/config.yml"}
+: ${cloudflared_logfile:="/var/log/cloudflared.log"}
+: ${rc_bg:="YES"}
+: ${cloudflared_output:="default"}
+
+# Check if cloudflared is installed
+if [ ! -x "/usr/local/bin/cloudflared" ]; then
+    echo "cloudflared is not installed. Please install it with 'pkg install cloudflared'."
+    exit 1
+fi
+
+pidfile="/var/run/${name}.pid"
+command="/usr/sbin/daemon"
+procname="/usr/local/bin/cloudflared"
+
+start_precmd() {
+    # Check and warn about socket buffer size for QUIC performance
+    current=$(sysctl -n kern.ipc.maxsockbuf 2>/dev/null || echo 0)
+    if [ "$current" -lt 8441037 ]; then
+        echo "Warning: kern.ipc.maxsockbuf is $current, recommended 8441037 for better QUIC performance."
+        echo "If running in a Jail: configure on the host system."
+        echo "On the host, run: sysctl -w kern.ipc.maxsockbuf=8441037"
+        echo "For permanent change: add 'kern.ipc.maxsockbuf=8441037' to /etc/sysctl.conf on the host. Run sysctl -w for immediate effect (no reboot needed)."
+    fi
+    # Auto-add log rotation if not present
+    if ! grep -r -q 'cloudflared.log' /etc/newsyslog.conf /etc/newsyslog.conf.d/ /usr/local/etc/newsyslog.conf.d/ 2>/dev/null; then
+        mkdir -p /usr/local/etc/newsyslog.conf.d/
+        echo '/var/log/cloudflared.log	root:wheel	644	7	1000	-	JC	/var/run/cloudflared.pid' > /usr/local/etc/newsyslog.conf.d/cloudflared.conf
+    fi
+}
+
+# Check if config file exists
+if [ -f "${cloudflared_config}" ]; then
+    # Extract tunnel name from config.yml
+    tunnel_name=$(grep '^tunnel:' "${cloudflared_config}" | awk '{print $2}')
+    if [ -z "${tunnel_name}" ]; then
+        echo "Tunnel name not found in configuration file ${cloudflared_config}."
+        exit 1
+    fi
+    # Redirect stdout+stderr to logfile via daemon; set output format to human-readable
+    command_args="-p ${pidfile} -o ${cloudflared_logfile} -m 3 /usr/local/bin/cloudflared --output ${cloudflared_output} tunnel run ${tunnel_name}"
+else
+    echo "Configuration file ${cloudflared_config} not found. Create it with the following example content:"
+    echo "tunnel: <your-tunnel-name>"
+    echo "credentials-file: /root/.cloudflared/<your-tunnel-id>.json"
+    echo "origincert: /root/.cloudflared/cert.pem"
+    echo ""
+    echo "ingress:"
+    echo "  - hostname: <your-domain>"
+    echo "    service: http://127.0.0.1:80"
+    echo "  - service: http_status:404"
+    exit 1
+fi
+
+if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
+    start_precmd
+fi
+
+run_rc_command "$1"
