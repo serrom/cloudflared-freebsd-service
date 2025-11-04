@@ -55,7 +55,7 @@ if [ -f "${cloudflared_config}" ]; then
         exit 1
     fi
     # Redirect stdout+stderr to logfile via daemon; set output format to human-readable
-    command_args="-p ${pidfile} -o ${cloudflared_logfile} -m 3 /usr/local/bin/cloudflared --output ${cloudflared_output} tunnel run ${tunnel_name}"
+    command_args="-p ${pidfile} -o ${cloudflared_logfile} -m 3 /usr/local/bin/cloudflared --config ${cloudflared_config} --output ${cloudflared_output} tunnel run ${tunnel_name}"
 else
     echo "Configuration file ${cloudflared_config} not found. Create it with the following example content:"
     echo "tunnel: <your-tunnel-name>"

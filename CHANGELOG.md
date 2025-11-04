@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-11-04
+
+### Fixed
+- **CRITICAL**: Added missing `--config` parameter to cloudflared command, which caused the tunnel to ignore user configuration and run in quick tunnel mode (trycloudflare.com) instead of using the configured tunnel
+
+### Changed
+- Updated command_args to properly pass configuration file path to cloudflared
+
 ## [1.0.0] - 2025-10-21
 
 ### Added
